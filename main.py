@@ -6,6 +6,10 @@ import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
 
+NUM_EPOCHS = 50
+BATCH_SIZE = 16
+KP_VALUE = 0.5  # Keep prob = 1 - Droput rate
+LR_VALUE = 0.001  # learning rate
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
@@ -105,7 +109,7 @@ tests.test_optimize(optimize)
 
 
 def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
-             correct_label, keep_prob, learning_rate, kp_value, lr_value):
+             correct_label, keep_prob, learning_rate):
     """
     Train neural network and print out the loss during training.
     :param sess: TF Session
@@ -122,10 +126,10 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     for epoch in range(epochs):
         # Create function to get batches
         total_loss = 0
-        for X_batch, gt_batch in get_batches_fn(batch_size):
+        for X_batch, y_batch in get_batches_fn(batch_size):
             loss, _ = sess.run([cross_entropy_loss, train_op],
-                               feed_dict={input_image: X_batch, correct_label: gt_batch,
-                                          keep_prob: kp_value, learning_rate: lr_value})
+                               feed_dict={input_image: X_batch, correct_label: y_batch,
+                                          keep_prob: KP_VALUE, learning_rate: LR_VALUE})
 
             total_loss += loss
 
@@ -135,17 +139,11 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
 
 tests.test_train_nn(train_nn)
 
-
 def run():
     num_classes = 2
     image_shape = (160, 576)  # KITTI dataset uses 160x576 images
     data_dir = './data'
     runs_dir = './runs'
-
-    EPOCHS = 50
-    BATCH_SIZE = 16
-    KP_VALUE = 0.5  # Keep prob = 1 - Droput rate
-    LR_VALUE = 0.001  # learning rate
 
     correct_label = tf.placeholder(tf.float32, [None, image_shape[0], image_shape[1], num_classes])
     learning_rate = tf.placeholder(tf.float32)
@@ -176,9 +174,9 @@ def run():
         sess.run(tf.global_variables_initializer())
 
         # Train NN using the train_nn function
-        train_nn(sess, EPOCHS, BATCH_SIZE, get_batches_fn,
+        train_nn(sess, NUM_EPOCHS, BATCH_SIZE, get_batches_fn,
                  train_op, cross_entropy_loss, img_input,
-                 correct_label, keep_prob, learning_rate, KP_VALUE, LR_VALUE)
+                 correct_label, keep_prob, learning_rate)
 
         # Save inference data using helper.save_inference_samples
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, img_input)
